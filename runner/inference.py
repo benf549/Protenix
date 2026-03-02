@@ -58,7 +58,7 @@ we can apply a patch before calling load_model_and_alphabet_local
 by manually adding argparse.Namespace to PyTorch's safe globals list.
 """
 
-torch.serialization.add_safe_globals([Namespace])
+#  torch.serialization.add_safe_globals([Namespace])
 
 
 class InferenceRunner(object):

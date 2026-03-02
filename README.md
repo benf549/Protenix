@@ -1,3 +1,43 @@
+# This fork enables installing Protenix on GPUs with CUDA capability 6 (Not officially supported)
+
+We have a server of 8x NVIDIA P40 GPUs (compute capability `6`) which prior to this did not support any AlphaFold3-class models running inference. 
+This seemed like a waste of idle compute to me. 
+I was able to get Protenix running on our P40s using the modifications to Protenix in this repo following the commands listed below.
+
+(Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and [conda](https://github.com/conda-forge/miniforge) first!)
+
+```bash
+### Conda install an appropriate gcc version
+conda create -n gcc11 -c conda-forge gcc_linux-64=11.* gxx_linux-64=11.* -y
+conda activate gcc11
+
+### Make sure the conda gcc shows up first for Ninja.
+export CC=$(which x86_64-conda-linux-gnu-gcc)
+export CXX=$(which x86_64-conda-linux-gnu-g++)
+export CUDAHOSTCXX="$CXX"
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+
+### Attempt to install Protenix.
+git clone https://github.com/benf549/Protenix.git
+uv venv --python 3.11
+uv pip install pip
+./.venv/bin/pip install -e .
+
+### Downgrade the pytorch version to something that supports cuda capability 6.
+source ./.venv/bin/activate
+pip uninstall -y torch torchvision torchaudio
+pip install 'torch==2.3.1+cu121' --index-url https://download.pytorch.org/whl/cu121
+
+### Test the installation (the dtype flags are necessary, and kernels probably won't work, but this is fine :)
+./.venv/bin/protenix pred -i examples/example_without_msa.json --use_msa=False --model_name 'protenix_base_20250630_v1.0.0' --trimul_kernel torch --triatt_kernel torch --dtype fp32 --enable_tf32=False
+```
+
+Assuming the installation following those instructions works for you as well, you can now run Protenix with something like the following command:
+
+```
+. ~/miniforge3/etc/profile.d/conda.sh && conda activate gcc11; export CC=$(which x86_64-conda-linux-gnu-gcc); export CXX=$(which x86_64-conda-linux-gnu-g++); export CUDAHOSTCXX="$CXX"; export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"; source ~/Protenix-gpu-1/.venv/bin/activate; protenix pred -i examples/example_without_msa.json --use_msa=False --model_name 'protenix_base_20250630_v1.0.0' --trimul_kernel torch --triatt_kernel torch --dtype fp32 --enable_tf32=False
+```
+
 # Protenix: Protein + X
 
 
